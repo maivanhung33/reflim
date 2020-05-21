@@ -23,7 +23,5 @@ __pycache__
 .idea/
 *.iml
 
-/web_review/.env
-
 # File uploads
 uploads
