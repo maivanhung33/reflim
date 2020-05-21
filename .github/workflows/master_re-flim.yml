@@ -30,4 +30,4 @@ jobs:
       with:
         app-name: 're-flim'
         slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_755c614c05ce474b990c6122e675e21e }}
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_fad86d64d53349bd9e47f3104ecce6a2 }}
