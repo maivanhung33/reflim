@@ -114,13 +114,13 @@ def updatePost(request, postId):
         return JsonResponse(dict(message='USER_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
     if 'title' in request.data.keys():
         post.title = request.data['title']
-    if 'name_film' in request.data.keys():
-        post.name_film = request.data['name_film']
+    if 'nameFilm' in request.data.keys():
+        post.name_film = request.data['nameFilm']
     if 'content' in request.data.keys():
         post.content = request.data['content']
     post.save()
     return JsonResponse(dict(id=post.id,
-                             name_film=post.name_film,
+                             nameFilm=post.name_film,
                              title=post.title,
                              content=post.content,
                              like=post.like,
