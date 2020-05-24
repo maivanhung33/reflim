@@ -41,4 +41,13 @@ def getUserByToken(request):
     user = Token.objects.get(key=token).user
     return JsonResponse(dict(id=user.id, username=user.username, first_name=user.first_name, last_name=user.last_name, email=user.email), status=status.HTTP_200_OK)
 
-
+@api_view(['PUT'])
+def updateUser(request):
+    token = request.headers['Authorization'].replace('Token ', '')
+    user = Token.objects.get(key=token).user
+    if 'lastName' in request.data.keys():
+        user.last_name = request.data['lastName']
+    if 'firstName' in request.data.keys():
+        user.first_name = request.data['firstName']
+    user.save();
+    return JsonResponse(dict(id=user.id, username=user.username, first_name=user.first_name, last_name=user.last_name, email=user.email), status=status.HTTP_200_OK)
