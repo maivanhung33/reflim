@@ -13,6 +13,7 @@ class Post(models.Model):
     name_film = models.CharField(max_length=120)
     title = models.CharField(max_length=120, null=True, blank=True)
     content = models.TextField(max_length=1200, null=True, blank=True)
+    picture = models.ImageField(upload_to='posts/', blank=True, null=True)
     like = models.IntegerField(null=True, blank=True, default=0)
     dislike = models.IntegerField(null=True, blank=True, default=0)
     comment_count = models.IntegerField(null=True, blank=True, default=0)

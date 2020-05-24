@@ -25,20 +25,25 @@ def createPost(request):
         return JsonResponse(data={'message': 'POST_TITLE_REQUIRE'}, status=400)
     if 'content' not in post.keys():
         return JsonResponse(data={'message': 'POST_CONTENT_REQUIRE'}, status=400)
+    if 'picture' not in request.FILES:
+        return JsonResponse(data={'message': 'POST_PICTURE_REQUIRE'}, status=400)
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
+    picture = request.FILES['picture']
     newPost = Post.objects.create(
         user_id=user.id,
         title=post['title'],
         name_film=post['nameFilm'],
-        content=post['content']
+        content=post['content'],
+        picture=picture
     )
     newPost.save()
     return JsonResponse(dict(id=newPost.id,
                              userId=newPost.user_id,
                              title=newPost.title,
                              nameFilm=newPost.name_film,
-                             content=newPost.content
+                             content=newPost.content,
+                             picture=json.dumps(str(newPost.picture)),
                              ), status=status.HTTP_200_OK
                         )
 
@@ -52,6 +57,7 @@ def getPosts(request):
             'title': e.title,
             'nameFilm': e.name_film,
             'content': e.content,
+            'picture': json.dumps(str(e.picture)),
             'like': e.like,
             'dislike': e.dislike,
             'commentCount': e.comment_count,
@@ -86,6 +92,7 @@ def getPost(request, postId):
             'title': post.title,
             'nameFilm': post.name_film,
             'content': post.content,
+            'picture': json.dumps(str(e.picture)),
             'like': post.like,
             'dislike': post.dislike,
             'commentCount': post.comment_count,
@@ -118,6 +125,8 @@ def updatePost(request, postId):
         post.name_film = request.data['nameFilm']
     if 'content' in request.data.keys():
         post.content = request.data['content']
+    if 'picture' in request.FILES.keys():
+        post.picture = request.FILES['picture']
     post.save()
     return JsonResponse(dict(id=post.id,
                              nameFilm=post.name_film,
@@ -126,6 +135,7 @@ def updatePost(request, postId):
                              like=post.like,
                              dislike=post.dislike,
                              comment_count=post.comment_count,
+                             picture=json.dumps(str(post.picture)),
                              user=post.user.id
                              ), status=status.HTTP_200_OK
                         )
