@@ -71,6 +71,12 @@ def getPosts(request):
     response = dict(count=len(post), data=posts)
     return JsonResponse(data=response, content_type='application/json')
 
+#
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def getPostByUser(request):
+#
+
 
 @api_view(['GET'])
 def getPost(request, postId):
