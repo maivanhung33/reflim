@@ -10,8 +10,8 @@ from film.models import Film
 class Post(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    name_film = models.CharField(max_length=120)
-    title = models.CharField(max_length=120, null=True, blank=True)
+    name_film = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, null=True, blank=True)
     content = models.TextField(null=True, blank=True)
     picture = models.ImageField(upload_to='posts/', blank=True, null=True)
     like = models.IntegerField(null=True, blank=True, default=0)
