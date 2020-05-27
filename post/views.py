@@ -92,7 +92,7 @@ def getPost(request, postId):
             'title': post.title,
             'nameFilm': post.name_film,
             'content': post.content,
-            'picture': json.dumps(str(e.picture)),
+            'picture': json.dumps(str(post.picture)),
             'like': post.like,
             'dislike': post.dislike,
             'commentCount': post.comment_count,
