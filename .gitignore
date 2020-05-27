@@ -22,6 +22,3 @@ __pycache__
 # Jetbrains IDEs
 .idea/
 *.iml
-
-# File uploads
-uploads
