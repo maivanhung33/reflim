@@ -4,13 +4,14 @@ from django.http import JsonResponse
 import json
 from random import randint
 from datetime import datetime, timezone
-
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view
 from flask import Flask
 from flask_mail import  Mail, Message
-from user.models import RecoveryCodeUser
+from user.models import RecoveryCodeUser, AvatarUser, ManagerUserPost
 # Create your views here.
 
 
@@ -35,6 +36,8 @@ def createUser(request):
         return JsonResponse(data={'message': 'EMAIL_EXISTED'}, status=status.HTTP_409_CONFLICT)
     newUser = User.objects.create(username=user['username'], password=make_password(user['password']), first_name=user['firstName'], last_name=user['lastName'], email=user['email'])
     newUser.save()
+    newManager = ManagerUserPost.objects.create(user_id= newUser.id)
+    newManager.save()
     return JsonResponse(dict(id=newUser.id, username=user['username'], first_name=user['firstName'], last_name=user['lastName'], email=user['email']), status=status.HTTP_200_OK)
 
 
@@ -42,9 +45,28 @@ def createUser(request):
 def getUserByToken(request):
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
-    return JsonResponse(dict(id=user.id, username=user.username, first_name=user.first_name, last_name=user.last_name, email=user.email), status=status.HTTP_200_OK)
+    userAvatar = AvatarUser.objects.filter(user_id=user.id, deleted_at=None)
+    if len(userAvatar) > 0:
+        avatar = json.dumps(str(userAvatar[0].avatar))
+    else:
+        avatar = None
+    try:
+        managerUserPost = ManagerUserPost.objects.get(user_id=user.id, deleted_at=None)
+    except ManagerUserPost.DoesNotExist:
+        return JsonResponse(dict(message='USER_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
+    return JsonResponse(dict(id=user.id,
+                             username=user.username,
+                             first_name=user.first_name,
+                             last_name=user.last_name,
+                             email=user.email,
+                             avatar=avatar,
+                             numberPost=managerUserPost.numberPost,
+                             numberLike=managerUserPost.numberLike
+                             ),
+                        status=status.HTTP_200_OK)
 
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def updateUser(request):
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
@@ -80,10 +102,10 @@ def sendRecoveryCode(request):
         app.config['MAIL_ASCII_ATTACHMENTS'] = False
         mail = Mail(app)
         msg = Message()
-        msg.subject = "Revovery code"
+        msg.subject = str(code) + ' - is your Refilm account recovery code'
         msg.recipients = [request.data['email']]
         msg.sender = 'thanhsonnguyen2022@gmail.com'
-        msg.body = str(code) + ' - is your Refilm account recovery code'
+        msg.body = 'Hi ' + user.username+ ', '+ '\n' +  'We received a request to reset your Refilm password.' + '\n' + 'Enter the following password reset code: ' + str(code)
         mail.send(msg)
     newRecoveryCode = RecoveryCodeUser.objects.create(
         user_id=user.id,
@@ -124,6 +146,52 @@ def forgotPasswordUser(request):
     recoveryCode.save()
     return JsonResponse(dict(message='Change password success'), status=status.HTTP_200_OK)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def uploadAvatar(request):
+    if 'avatar' not in request.FILES:
+        return JsonResponse(data={'message': 'POST_PICTURE_REQUIRE'}, status=400)
+    token = request.headers['Authorization'].replace('Token ', '')
+    user = Token.objects.get(key=token).user
+    try:
+        user = User.objects.get(id=user.id, is_active=True)
+    except User.DoesNotExist:
+        return JsonResponse(dict(message='USER_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
+    userAvatar = AvatarUser.objects.filter(user_id=user.id, deleted_at=None)
+    avatar = request.FILES['avatar']
+    if len(userAvatar) > 0:
+        userAvatar[0].avatar = avatar
+        userAvatar[0].save()
+        return JsonResponse(dict(id=userAvatar[0].id,
+                                 userId=userAvatar[0].user_id,
+                                 avatar=json.dumps(str(userAvatar[0].avatar)),
+                                 ), status=status.HTTP_200_OK
+                            )
+    else:
+        newAvatar = AvatarUser.objects.create(
+            user_id=user.id,
+            avatar=avatar
+        )
+        newAvatar.save()
+        return JsonResponse(dict(id=newAvatar.id,
+                                 userId=newAvatar.user_id,
+                                 avatar=json.dumps(str(newAvatar.avatar)),
+                                 ), status=status.HTTP_200_OK
+                            )
 
-
-
+@api_view(['GET'])
+def rankingUser(request):
+    rankUser: list = []
+    for e in ManagerUserPost.objects.filter(deleted_at=None).select_related('user').order_by('-numberLike', '-numberPost'):
+        user: dict = {
+            'numberLike': e.numberLike,
+            'numberPost': e.numberPost,
+            'user': {
+                'username': e.user.username,
+                'firstName': e.user.first_name,
+                'lastName': e.user.last_name
+            }
+        }
+        rankUser.append(user)
+    response = dict(data=rankUser)
+    return JsonResponse(data=response, content_type='application/json')

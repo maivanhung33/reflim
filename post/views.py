@@ -1,6 +1,5 @@
-from datetime import datetime
-
 import pytz
+from datetime import datetime
 from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse
 # Create your views here.
@@ -13,6 +12,7 @@ from rest_framework.utils import json
 from film.models import Film
 from post.models import Post, UserCommentPost, UserLikePost
 from post.serializers import PostSerializer
+from user.models import ManagerUserPost
 
 
 @api_view(['POST'])
@@ -31,12 +31,18 @@ def createPost(request):
         return JsonResponse(data={'message': 'POST_PICTURE_REQUIRE'}, status=400)
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
+    try:
+        managerUserPost = ManagerUserPost.objects.get(user_id=user.id, deleted_at=None)
+    except ManagerUserPost.DoesNotExist:
+        return JsonResponse(dict(message='USER_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
     picture = request.FILES['picture']
     try:
         if not isinstance(int(post['filmType']), int):
             return JsonResponse(data={'message': 'TYPE_OF_FILM_NOT_VALID'}, status=400)
     except:
         return JsonResponse(data={'message': 'TYPE_OF_FILM_NOT_VALID'}, status=400)
+    managerUserPost.numberPost = managerUserPost.numberPost + 1
+    managerUserPost.save()
     newPost = Post.objects.create(
         user_id=user.id,
         title=post['title'],
@@ -69,8 +75,8 @@ def getPosts(request):
             'content': e.content,
             'picture': json.dumps(str(e.picture)),
             'like': e.like,
-            'dislike': e.dislike,
             'commentCount': e.comment_count,
+            'createdAt': e.created_at,
             'user': {
                 'username': e.user.username,
                 'firstName': e.user.first_name,
@@ -78,14 +84,32 @@ def getPosts(request):
             }
         }
         posts.append(post)
-    response = dict(count=len(post), data=posts)
+    response = dict(data=posts)
     return JsonResponse(data=response, content_type='application/json')
 
-#
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def getPostByUser(request):
-#
+@api_view(['GET'])
+def getPostByUser(request,userId):
+    posts: list = []
+    for e in Post.objects.filter(user_id=userId, deleted_at=None).select_related('user'):
+        post: dict = {
+            'id': str(e.id),
+            'title': e.title,
+            'nameFilm': e.name_film,
+            'filmType': e.film_type,
+            'content': e.content,
+            'picture': json.dumps(str(e.picture)),
+            'like': e.like,
+            'commentCount': e.comment_count,
+            'createdAt': e.created_at,
+            'user': {
+                'username': e.user.username,
+                'firstName': e.user.first_name,
+                'lastName': e.user.last_name
+            }
+        }
+        posts.append(post)
+    response = dict(data=posts)
+    return JsonResponse(data=response, content_type='application/json')
 
 
 @api_view(['GET'])
@@ -103,6 +127,10 @@ def getPost(request, postId):
             print(comment)
             comments.append(comment)
             print(comments)
+        likes = UserLikePost.objects.filter(post_id=postId, deleted_at=None)
+        userLikes: list = []
+        for like in likes:
+            userLikes.append(like.user_id)
         response: dict = {
             'id': post.id,
             'title': post.title,
@@ -111,14 +139,15 @@ def getPost(request, postId):
             'filmType': post.film_type,
             'picture': json.dumps(str(post.picture)),
             'like': post.like,
-            'dislike': post.dislike,
             'commentCount': post.comment_count,
+            'createdAt': post.created_at,
             'user': {
                 'username': post.user.username,
                 'firstName': post.user.first_name,
                 'lastName': post.user.last_name
             },
-            'comments': comments
+            'comments': comments,
+            'userLikes':userLikes
         }
         return JsonResponse(data=dict(data=response), content_type='application/json')
     except Post.DoesNotExist:
@@ -158,7 +187,6 @@ def updatePost(request, postId):
                              title=post.title,
                              content=post.content,
                              like=post.like,
-                             dislike=post.dislike,
                              commentCount=post.comment_count,
                              picture=json.dumps(str(post.picture)),
                              user=post.user.id
@@ -270,29 +298,25 @@ def likePost(request):
         post = Post.objects.get(id=likeInput['postId'], deleted_at=None)
     except Post.DoesNotExist:
         return JsonResponse(dict(message='POST_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        managerUserPost = ManagerUserPost.objects.get(user_id=post.user_id, deleted_at=None)
+    except ManagerUserPost.DoesNotExist:
+        return JsonResponse(dict(message='USER_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
+
     like = UserLikePost.objects.filter(post_id=likeInput['postId'], user_id=user.id, deleted_at=None)
-    if len(like) > 0 and like[0].status == 0:
+    if len(like) > 0:
         return JsonResponse(dict(message='LIKE_EXISTED'), status=status.HTTP_409_CONFLICT)
-    if len(like) > 0 and like[0].status == 1:
-        like[0].status = 0
-        like[0].save()
-        post.like += 1
-        post.dislike = post.dislike - 1
-        post.save()
-        return JsonResponse(dict(id=like[0].id,
-                                 userId=like[0].user_id,
-                                 postId=like[0].post_id,
-                                 ), status=status.HTTP_200_OK
-                            )
-    if len(like) == 0:
+    else:
         newLike = UserLikePost.objects.create(
             user_id=user.id,
-            post_id=likeInput['postId'],
-            status=0
+            post_id=likeInput['postId']
         )
         newLike.save()
         post.like += 1
         post.save()
+        managerUserPost.numberLike = managerUserPost.numberLike + 1
+        managerUserPost.save()
         return JsonResponse(dict(id=newLike.id,
                                  userId=newLike.user_id,
                                  postId=newLike.post_id,
@@ -313,77 +337,19 @@ def cancelLike(request):
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
     try:
-        like = UserLikePost.objects.get(post_id=likeInput['postId'], user_id=user.id, status=0, deleted_at=None)
+        like = UserLikePost.objects.get(post_id=likeInput['postId'], user_id=user.id, deleted_at=None)
     except UserLikePost.DoesNotExist:
         return JsonResponse(dict(message='LIKE_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
+    try:
+        managerUserPost = ManagerUserPost.objects.get(user_id=post.user_id, deleted_at=None)
+    except ManagerUserPost.DoesNotExist:
+        return JsonResponse(dict(message='USER_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
+
     deletedAt = datetime.utcnow().replace(tzinfo=pytz.utc)
     like.deleted_at = deletedAt
     like.save()
     post.like = post.like - 1
     post.save()
-    return JsonResponse(dict(status=True), status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def dislikePost(request):
-    dislikeInput: dict = request.data
-    token = request.headers['Authorization'].replace('Token ', '')
-    user = Token.objects.get(key=token).user
-    if 'postId' not in dislikeInput.keys():
-        return JsonResponse(data={'message': 'POST_ID_REQUIRE'}, status=400)
-    try:
-        post = Post.objects.get(id=dislikeInput['postId'], deleted_at=None)
-    except Post.DoesNotExist:
-        return JsonResponse(dict(message='POST_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
-    like = UserLikePost.objects.filter(post_id=dislikeInput['postId'], user_id=user.id, deleted_at=None)
-    if len(like) > 0 and like[0].status == 1:
-        return JsonResponse(dict(message='DISLIKE_EXISTED'), status=status.HTTP_409_CONFLICT)
-    if len(like) > 0 and like[0].status == 0:
-        like[0].status = 1
-        like[0].save()
-        post.dislike += 1
-        post.like = post.like - 1
-        post.save()
-        return JsonResponse(dict(id=like[0].id,
-                                 userId=like[0].user_id,
-                                 postId=like[0].post_id,
-                                 ), status=status.HTTP_200_OK
-                            )
-    if len(like) == 0:
-        newLike = UserLikePost.objects.create(
-            user_id=user.id,
-            post_id=dislikeInput['postId'],
-            status=1
-        )
-        newLike.save()
-        post.dislike += 1
-        post.save()
-        return JsonResponse(dict(id=newLike.id,
-                                 userId=newLike.user_id,
-                                 postId=newLike.post_id,
-                                 ), status=status.HTTP_200_OK
-                            )
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def cancelDislike(request):
-    dislikeInput: dict = request.data
-    if 'postId' not in dislikeInput.keys():
-        return JsonResponse(data={'message': 'POST_ID_REQUIRE'}, status=400)
-    try:
-        post = Post.objects.get(id=dislikeInput['postId'], deleted_at=None)
-    except Post.DoesNotExist:
-        return JsonResponse(dict(message='POST_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
-    token = request.headers['Authorization'].replace('Token ', '')
-    user = Token.objects.get(key=token).user
-    try:
-        dislike = UserLikePost.objects.get(post_id=dislikeInput['postId'], user_id=user.id, status=1, deleted_at=None)
-    except UserLikePost.DoesNotExist:
-        return JsonResponse(dict(message='DISLIKE_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
-    deletedAt = datetime.utcnow().replace(tzinfo=pytz.utc)
-    dislike.deleted_at = deletedAt
-    dislike.save()
-    post.dislike = post.dislike - 1
-    post.save()
+    managerUserPost.numberLike = managerUserPost.numberLike - 1
+    managerUserPost.save()
     return JsonResponse(dict(status=True), status=status.HTTP_200_OK)
