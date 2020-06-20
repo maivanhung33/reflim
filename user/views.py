@@ -96,7 +96,7 @@ def sendRecoveryCode(request):
         app.config['MAIL_USE_TLS'] = True
         app.config['MAIL_USE_SSL'] = False
         app.config['MAIL_USERNAME'] = "thanhsonnguyen2022@gmail.com"
-        app.config['MAIL_PASSWORD'] = "Nguyenthanhson123"
+        app.config['MAIL_PASSWORD'] = "Nguyenthanhson1234@@"
         app.config['MAIL_DEFAULT_SENDER'] = "thanhsonnguyen2022@gmail.com"
         app.config['MAIL_MAX_EMAILS'] = None
         app.config['MAIL_ASCII_ATTACHMENTS'] = False
