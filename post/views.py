@@ -21,6 +21,8 @@ def createPost(request):
     post: dict = request.POST
     if 'nameFilm' not in post.keys():
         return JsonResponse(data={'message': 'NAME_FILM_REQUIRE'}, status=400)
+    if 'filmType' not in post.keys():
+        return JsonResponse(data={'message': 'TYPE_OF_FILM_REQUIRE'}, status=400)
     if 'title' not in post.keys():
         return JsonResponse(data={'message': 'POST_TITLE_REQUIRE'}, status=400)
     if 'content' not in post.keys():
@@ -30,9 +32,15 @@ def createPost(request):
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
     picture = request.FILES['picture']
+    try:
+        if not isinstance(int(post['filmType']), int):
+            return JsonResponse(data={'message': 'TYPE_OF_FILM_NOT_VALID'}, status=400)
+    except:
+        return JsonResponse(data={'message': 'TYPE_OF_FILM_NOT_VALID'}, status=400)
     newPost = Post.objects.create(
         user_id=user.id,
         title=post['title'],
+        film_type = int(post['filmType']),
         name_film=post['nameFilm'],
         content=post['content'],
         picture=picture
@@ -42,6 +50,7 @@ def createPost(request):
                              userId=newPost.user_id,
                              title=newPost.title,
                              nameFilm=newPost.name_film,
+                             filmType = newPost.film_type,
                              content=newPost.content,
                              picture=json.dumps(str(newPost.picture)),
                              ), status=status.HTTP_200_OK
@@ -56,6 +65,7 @@ def getPosts(request):
             'id': str(e.id),
             'title': e.title,
             'nameFilm': e.name_film,
+            'filmType': e.film_type,
             'content': e.content,
             'picture': json.dumps(str(e.picture)),
             'like': e.like,
@@ -98,6 +108,7 @@ def getPost(request, postId):
             'title': post.title,
             'nameFilm': post.name_film,
             'content': post.content,
+            'filmType': post.film_type,
             'picture': json.dumps(str(post.picture)),
             'like': post.like,
             'dislike': post.dislike,
@@ -129,6 +140,13 @@ def updatePost(request, postId):
         post.title = request.data['title']
     if 'nameFilm' in request.data.keys():
         post.name_film = request.data['nameFilm']
+    if 'filmType' in request.data.keys():
+        try:
+            if not isinstance(int(request.data['filmType']), int):
+                return JsonResponse(data={'message': 'TYPE_OF_FILM_NOT_VALID'}, status=400)
+        except:
+            return JsonResponse(data={'message': 'TYPE_OF_FILM_NOT_VALID'}, status=400)
+        post.film_type = int(request.data['filmType'])
     if 'content' in request.data.keys():
         post.content = request.data['content']
     if 'picture' in request.FILES.keys():
@@ -136,11 +154,12 @@ def updatePost(request, postId):
     post.save()
     return JsonResponse(dict(id=post.id,
                              nameFilm=post.name_film,
+                             filmType = post.film_type,
                              title=post.title,
                              content=post.content,
                              like=post.like,
                              dislike=post.dislike,
-                             comment_count=post.comment_count,
+                             commentCount=post.comment_count,
                              picture=json.dumps(str(post.picture)),
                              user=post.user.id
                              ), status=status.HTTP_200_OK
