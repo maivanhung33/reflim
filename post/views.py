@@ -91,6 +91,11 @@ def getPosts(request):
 @api_view(['GET'])
 def getPostByUser(request,userId):
     posts: list = []
+    userAvatar = AvatarUser.objects.filter(user_id=userId, deleted_at=None)
+    if len(userAvatar) > 0:
+        avatar = json.dumps(str(userAvatar[0].avatar))
+    else:
+        avatar = None
     for e in Post.objects.filter(user_id=userId, deleted_at=None).select_related('user'):
         post: dict = {
             'id': str(e.id),
@@ -103,9 +108,13 @@ def getPostByUser(request,userId):
             'commentCount': e.comment_count,
             'createdAt': e.created_at,
             'user': {
+                'id': e.user.id,
                 'username': e.user.username,
                 'firstName': e.user.first_name,
-                'lastName': e.user.last_name
+                'lastName': e.user.last_name,
+                'email':e.user.email,
+                'createdAt': e.user.date_joined,
+                'avatar':avatar
             }
         }
         posts.append(post)
