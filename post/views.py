@@ -13,6 +13,7 @@ from film.models import Film
 from post.models import Post, UserCommentPost, UserLikePost
 from post.serializers import PostSerializer
 from user.models import ManagerUserPost
+from user.models import AvatarUser
 
 
 @api_view(['POST'])
@@ -119,14 +120,24 @@ def getPost(request, postId):
         post = Post.objects.select_related('user').get(id=postId, deleted_at=None)
         commentsQuery = UserCommentPost.objects.select_related('user').filter(post_id=postId, deleted_at=None)
         for value in commentsQuery:
+            userAvatar = AvatarUser.objects.filter(user_id=value.user.id, deleted_at=None)
+            if len(userAvatar) > 0:
+                avatar = json.dumps(str(userAvatar[0].avatar))
+            else:
+                avatar = None
             comment: dict = {
                 'id': value.id,
                 'content': value.content,
-                'user': value.user.username
+                'infoUser': {
+                    'username':value.user.username,
+                    'firstName': value.user.first_name,
+                    'lastName': value.user.last_name,
+                    'email': value.user.email,
+                    'avatar': avatar
+                },
+                'created_at': value.created_at
             }
-            print(comment)
             comments.append(comment)
-            print(comments)
         likes = UserLikePost.objects.filter(post_id=postId, deleted_at=None)
         userLikes: list = []
         for like in likes:
