@@ -239,6 +239,12 @@ def deletePost(request, postId):
     user = Token.objects.get(key=token).user
     if user.id != post.user.id:
         return JsonResponse(dict(message='USER_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
+    try:
+        managerUserPost = ManagerUserPost.objects.get(user_id=user.id, deleted_at=None)
+    except ManagerUserPost.DoesNotExist:
+        return JsonResponse(dict(message='USER_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
+    managerUserPost.numberPost = managerUserPost.numberPost - 1
+    managerUserPost.save()
     deletedAt = datetime.utcnow().replace(tzinfo=pytz.utc)
     post.deleted_at = deletedAt
     post.save()
