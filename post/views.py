@@ -12,8 +12,7 @@ from rest_framework.utils import json
 from film.models import Film
 from post.models import Post, UserCommentPost, UserLikePost
 from post.serializers import PostSerializer
-from user.models import ManagerUserPost
-from user.models import AvatarUser
+from user.models import ManagerUserPost, AvatarUser
 
 
 @api_view(['POST'])
@@ -96,6 +95,28 @@ def getPostByUser(request,userId):
         avatar = json.dumps(str(userAvatar[0].avatar))
     else:
         avatar = None
+    try:
+        inforUser = User.objects.get(id=userId, is_active=True)
+    except User.DoesNotExist:
+        return JsonResponse(dict(message='USER_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        managerUserPost = ManagerUserPost.objects.get(user_id=userId, deleted_at=None)
+    except ManagerUserPost.DoesNotExist:
+        return JsonResponse(dict(message='USER_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
+    #
+    inforUser: dict = {
+        'id': inforUser.id,
+        'username': inforUser.username,
+        'email': inforUser.email,
+        'firstName': inforUser.first_name,
+        'lastName': inforUser.last_name,
+        'avatar':avatar,
+        'createdAt': inforUser.date_joined,
+        'numberPost': managerUserPost.numberPost,
+        'numberLike': managerUserPost.numberLike
+    }
+
     for e in Post.objects.filter(user_id=userId, deleted_at=None).select_related('user'):
         post: dict = {
             'id': str(e.id),
@@ -107,18 +128,9 @@ def getPostByUser(request,userId):
             'like': e.like,
             'commentCount': e.comment_count,
             'createdAt': e.created_at,
-            'user': {
-                'id': e.user.id,
-                'username': e.user.username,
-                'firstName': e.user.first_name,
-                'lastName': e.user.last_name,
-                'email':e.user.email,
-                'createdAt': e.user.date_joined,
-                'avatar':avatar
-            }
         }
         posts.append(post)
-    response = dict(data=posts)
+    response = dict(data= dict(inforUser=inforUser, listPost=posts))
     return JsonResponse(data=response, content_type='application/json')
 
 
