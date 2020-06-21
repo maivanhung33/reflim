@@ -183,13 +183,21 @@ def uploadAvatar(request):
 def rankingUser(request):
     rankUser: list = []
     for e in ManagerUserPost.objects.filter(deleted_at=None).select_related('user').order_by('-numberLike', '-numberPost'):
+        userAvatar = AvatarUser.objects.filter(user_id=e.user.id, deleted_at=None)
+        if len(userAvatar) > 0:
+            avatar = json.dumps(str(userAvatar[0].avatar))
+        else:
+            avatar = None
         user: dict = {
             'numberLike': e.numberLike,
             'numberPost': e.numberPost,
             'user': {
+                'id': e.user.id,
                 'username': e.user.username,
                 'firstName': e.user.first_name,
-                'lastName': e.user.last_name
+                'lastName': e.user.last_name,
+                'email': e.user.email,
+                'avatar': avatar
             }
         }
         rankUser.append(user)

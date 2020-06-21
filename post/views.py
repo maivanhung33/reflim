@@ -129,6 +129,7 @@ def getPost(request, postId):
                 'id': value.id,
                 'content': value.content,
                 'infoUser': {
+                    'id':value.user.id,
                     'username':value.user.username,
                     'firstName': value.user.first_name,
                     'lastName': value.user.last_name,
@@ -153,6 +154,7 @@ def getPost(request, postId):
             'commentCount': post.comment_count,
             'createdAt': post.created_at,
             'user': {
+                'id': post.user.id,
                 'username': post.user.username,
                 'firstName': post.user.first_name,
                 'lastName': post.user.last_name
