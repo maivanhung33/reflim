@@ -364,3 +364,28 @@ def cancelLike(request):
     managerUserPost.numberLike = managerUserPost.numberLike - 1
     managerUserPost.save()
     return JsonResponse(dict(status=True), status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def getRatingPosts(request):
+    posts: list = []
+    for e in Post.objects.filter(deleted_at=None).select_related('user').order_by('-like', 'title')[:8]:
+        post: dict = {
+            'id': str(e.id),
+            'title': e.title,
+            'nameFilm': e.name_film,
+            'filmType': e.film_type,
+            'content': e.content,
+            'picture': json.dumps(str(e.picture)),
+            'like': e.like,
+            'commentCount': e.comment_count,
+            'createdAt': e.created_at,
+            'user': {
+                'username': e.user.username,
+                'firstName': e.user.first_name,
+                'lastName': e.user.last_name
+            }
+        }
+        posts.append(post)
+    response = dict(data=posts)
+    return JsonResponse(data=response, content_type='application/json')
