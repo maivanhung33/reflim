@@ -18,6 +18,7 @@ class Post(models.Model):
     picture = models.ImageField(upload_to='posts/', blank=True, null=True)
     like = models.IntegerField(null=True, blank=True, default=0)
     comment_count = models.IntegerField(null=True, blank=True, default=0)
+    search_value = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(blank=True, null=True)

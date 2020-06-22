@@ -11,10 +11,12 @@ from post.views import createPost,\
     likePost,\
     cancelLike,\
     getPostByUser,\
-    getRatingPosts
+    getRatingPosts,\
+    searchPosts
 
 urlpatterns = [
     path('', getPosts, name='get_posts'),
+    path('search/', searchPosts, name='search_posts'),
     path('rating/', getRatingPosts, name='get_rating_posts'),
     path('<str:postId>', getPost, name='get_post'),
     path('posts-by-user/<int:userId>', getPostByUser, name='posts-by-user'),

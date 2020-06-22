@@ -13,7 +13,7 @@ from film.models import Film
 from post.models import Post, UserCommentPost, UserLikePost
 from post.serializers import PostSerializer
 from user.models import ManagerUserPost, AvatarUser
-
+import unidecode
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -41,6 +41,8 @@ def createPost(request):
             return JsonResponse(data={'message': 'TYPE_OF_FILM_NOT_VALID'}, status=400)
     except:
         return JsonResponse(data={'message': 'TYPE_OF_FILM_NOT_VALID'}, status=400)
+    value = (post['title'] + ' ' + post['nameFilm'] + ' ' + post['content']).lower()
+    searchValue = unidecode.unidecode(value)
     managerUserPost.numberPost = managerUserPost.numberPost + 1
     managerUserPost.save()
     newPost = Post.objects.create(
@@ -49,7 +51,8 @@ def createPost(request):
         film_type = int(post['filmType']),
         name_film=post['nameFilm'],
         content=post['content'],
-        picture=picture
+        picture=picture,
+        search_value = searchValue
     )
     newPost.save()
     return JsonResponse(dict(id=newPost.id,
@@ -214,6 +217,11 @@ def updatePost(request, postId):
         post.content = request.data['content']
     if 'picture' in request.FILES.keys():
         post.picture = request.FILES['picture']
+    post.save()
+    post = Post.objects.get(id=postId, deleted_at=None)
+    value = (post.title + ' ' + post.name_film + ' ' + post.content).lower()
+    searchValue = unidecode.unidecode(value)
+    post.search_value = searchValue
     post.save()
     return JsonResponse(dict(id=post.id,
                              nameFilm=post.name_film,
@@ -418,3 +426,33 @@ def getRatingPosts(request):
         posts.append(post)
     response = dict(data=posts)
     return JsonResponse(data=response, content_type='application/json')
+
+@api_view(['POST'])
+def searchPosts(request):
+    if 'searchValue' not in request.data.keys():
+        return JsonResponse(data={'message': 'SEARCH_VALUE_REQUIRE'}, status=400)
+    value = request.data['searchValue'].lower()
+    searchValue = unidecode.unidecode(value)
+    print(searchValue)
+    posts: list = []
+    for e in Post.objects.filter(search_value__contains=searchValue).select_related('user'):
+        post: dict = {
+            'id': str(e.id),
+            'title': e.title,
+            'nameFilm': e.name_film,
+            'filmType': e.film_type,
+            'content': e.content,
+            'picture': json.dumps(str(e.picture)),
+            'like': e.like,
+            'commentCount': e.comment_count,
+            'createdAt': e.created_at,
+            'user': {
+                'username': e.user.username,
+                'firstName': e.user.first_name,
+                'lastName': e.user.last_name
+            }
+        }
+        posts.append(post)
+    response = dict(data=posts)
+    return JsonResponse(data=response, content_type='application/json')
+
