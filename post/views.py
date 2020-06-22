@@ -433,7 +433,6 @@ def searchPosts(request):
         return JsonResponse(data={'message': 'SEARCH_VALUE_REQUIRE'}, status=400)
     value = request.data['searchValue'].lower()
     searchValue = unidecode.unidecode(value)
-    print(searchValue)
     posts: list = []
     for e in Post.objects.filter(search_value__contains=searchValue).select_related('user'):
         post: dict = {
