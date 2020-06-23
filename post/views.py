@@ -167,6 +167,11 @@ def getPost(request, postId):
         userLikes: list = []
         for like in likes:
             userLikes.append(like.user_id)
+        userPostAvatar = AvatarUser.objects.filter(user_id=post.user.id, deleted_at=None)
+        if len(userPostAvatar) > 0:
+            userPostAvatar = json.dumps(str(userPostAvatar[0].avatar))
+        else:
+            userPostAvatar = None
         response: dict = {
             'id': post.id,
             'title': post.title,
@@ -181,7 +186,8 @@ def getPost(request, postId):
                 'id': post.user.id,
                 'username': post.user.username,
                 'firstName': post.user.first_name,
-                'lastName': post.user.last_name
+                'lastName': post.user.last_name,
+                'avatar': userPostAvatar
             },
             'comments': comments,
             'userLikes':userLikes
@@ -420,7 +426,9 @@ def getRatingPosts(request):
             'user': {
                 'username': e.user.username,
                 'firstName': e.user.first_name,
-                'lastName': e.user.last_name
+                'lastName': e.user.last_name,
+                'email': e.user.email,
+                'createdAt': e.user.date_joined
             }
         }
         posts.append(post)
@@ -448,7 +456,9 @@ def searchPosts(request):
             'user': {
                 'username': e.user.username,
                 'firstName': e.user.first_name,
-                'lastName': e.user.last_name
+                'lastName': e.user.last_name,
+                'email': e.user.email,
+                'createdAt': e.user.date_joined
             }
         }
         posts.append(post)
