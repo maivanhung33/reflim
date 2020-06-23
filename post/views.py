@@ -434,7 +434,7 @@ def searchPosts(request):
     value = request.data['searchValue'].lower()
     searchValue = unidecode.unidecode(value)
     posts: list = []
-    for e in Post.objects.filter(search_value__contains=searchValue).select_related('user'):
+    for e in Post.objects.filter(search_value__contains=searchValue, deleted_at=None).select_related('user'):
         post: dict = {
             'id': str(e.id),
             'title': e.title,
