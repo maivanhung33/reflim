@@ -311,7 +311,7 @@ def commentPost(request):
             parent = UserCommentPost.objects.get(id=commentInput['parentId'], deleted_at=None)
         except UserCommentPost.DoesNotExist:
             return JsonResponse(dict(message='COMMENT_PARENT_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
-        if parent.post_id != post.id:
+        if parent.post_id != post.id or parent.parent_id is not None:
             return JsonResponse(dict(message='POST_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
         newComment = UserCommentPost.objects.create(
             user_id=user.id,
