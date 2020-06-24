@@ -142,13 +142,38 @@ def getPost(request, postId):
     comments: list = []
     try:
         post = Post.objects.select_related('user').get(id=postId, deleted_at=None)
-        commentsQuery = UserCommentPost.objects.select_related('user').filter(post_id=postId, deleted_at=None)
+        commentsQuery = UserCommentPost.objects.select_related('user').filter(post_id=postId,parent_id=None, deleted_at=None)
+        print(commentsQuery)
         for value in commentsQuery:
             userAvatar = AvatarUser.objects.filter(user_id=value.user.id, deleted_at=None)
             if len(userAvatar) > 0:
                 avatar = json.dumps(str(userAvatar[0].avatar))
             else:
                 avatar = None
+            childrent = UserCommentPost.objects.select_related('user').filter(parent_id=value.id,
+                                                                              deleted_at=None)
+            childrentComments: list = []
+            if len(childrent) > 0:
+                for i in childrent:
+                    userAvatar = AvatarUser.objects.filter(user_id=i.user.id, deleted_at=None)
+                    if len(userAvatar) > 0:
+                        avatar = json.dumps(str(userAvatar[0].avatar))
+                    else:
+                        avatar = None
+                    comment: dict = {
+                        'id': i.id,
+                        'content': i.content,
+                        'infoUser': {
+                            'id': i.user.id,
+                            'username': i.user.username,
+                            'firstName': i.user.first_name,
+                            'lastName': i.user.last_name,
+                            'email': i.user.email,
+                            'avatar': avatar
+                        },
+                        'created_at': i.created_at
+                    }
+                    childrentComments.append(comment)
             comment: dict = {
                 'id': value.id,
                 'content': value.content,
@@ -160,7 +185,8 @@ def getPost(request, postId):
                     'email': value.user.email,
                     'avatar': avatar
                 },
-                'created_at': value.created_at
+                'created_at': value.created_at,
+                'childrentComments': childrentComments
             }
             comments.append(comment)
         likes = UserLikePost.objects.filter(post_id=postId, deleted_at=None)
@@ -279,18 +305,30 @@ def commentPost(request):
         return JsonResponse(dict(message='POST_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
-    newComment = UserCommentPost.objects.create(
-        user_id=user.id,
-        post_id=commentInput['postId'],
-        content=commentInput['content']
-    )
-    newComment.save()
+    if 'parentId' in commentInput.keys():
+        parentId = commentInput['parentId']
+        newComment = UserCommentPost.objects.create(
+            user_id=user.id,
+            post_id=commentInput['postId'],
+            content=commentInput['content'],
+            parent_id=commentInput['parentId']
+        )
+        newComment.save()
+    else:
+        parentId = None
+        newComment = UserCommentPost.objects.create(
+            user_id=user.id,
+            post_id=commentInput['postId'],
+            content=commentInput['content']
+        )
+        newComment.save()
     post.comment_count += 1
     post.save()
     return JsonResponse(dict(id=newComment.id,
                              userId=newComment.user_id,
                              postId=newComment.post_id,
-                             content=newComment.content
+                             content=newComment.content,
+                             parentId=parentId
                              ), status=status.HTTP_200_OK
                         )
 
