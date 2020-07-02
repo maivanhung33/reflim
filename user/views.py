@@ -60,6 +60,8 @@ def getUserByToken(request):
                              last_name=user.last_name,
                              email=user.email,
                              avatar=avatar,
+                             isSuperUser=user.is_superuser,
+                             isStaff=user.is_staff,
                              numberPost=managerUserPost.numberPost,
                              numberLike=managerUserPost.numberLike
                              ),

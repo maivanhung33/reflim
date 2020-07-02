@@ -142,7 +142,7 @@ def getPost(request, postId):
     comments: list = []
     try:
         post = Post.objects.select_related('user').get(id=postId, deleted_at=None)
-        commentsQuery = UserCommentPost.objects.select_related('user').filter(post_id=postId,parent_id=None, deleted_at=None)
+        commentsQuery = UserCommentPost.objects.select_related('user').filter(post_id=postId,parent_id=None, deleted_at=None).order_by('created_at')
         print(commentsQuery)
         for value in commentsQuery:
             userAvatar = AvatarUser.objects.filter(user_id=value.user.id, deleted_at=None)
@@ -151,15 +151,15 @@ def getPost(request, postId):
             else:
                 avatar = None
             childrent = UserCommentPost.objects.select_related('user').filter(parent_id=value.id,
-                                                                              deleted_at=None)
+                                                                              deleted_at=None).order_by('created_at')
             childrentComments: list = []
             if len(childrent) > 0:
                 for i in childrent:
-                    userAvatar = AvatarUser.objects.filter(user_id=i.user.id, deleted_at=None)
-                    if len(userAvatar) > 0:
-                        avatar = json.dumps(str(userAvatar[0].avatar))
+                    userAvatar2 = AvatarUser.objects.filter(user_id=i.user.id, deleted_at=None)
+                    if len(userAvatar2) > 0:
+                        avatar2 = json.dumps(str(userAvatar2[0].avatar))
                     else:
-                        avatar = None
+                        avatar2 = None
                     comment: dict = {
                         'id': i.id,
                         'content': i.content,
@@ -169,7 +169,7 @@ def getPost(request, postId):
                             'firstName': i.user.first_name,
                             'lastName': i.user.last_name,
                             'email': i.user.email,
-                            'avatar': avatar
+                            'avatar': avatar2
                         },
                         'created_at': i.created_at
                     }
@@ -233,7 +233,8 @@ def updatePost(request, postId):
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
     if user.id != post.user.id:
-        return JsonResponse(dict(message='USER_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
+        if user.is_superuser is False or user.is_staff is False:
+            return JsonResponse(dict(message='USER_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
     if 'title' in request.data.keys():
         post.title = request.data['title']
     if 'nameFilm' in request.data.keys():
@@ -278,7 +279,8 @@ def deletePost(request, postId):
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
     if user.id != post.user.id:
-        return JsonResponse(dict(message='USER_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
+        if user.is_superuser is False or user.is_staff is False:
+            return JsonResponse(dict(message='USER_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
     try:
         managerUserPost = ManagerUserPost.objects.get(user_id=user.id, deleted_at=None)
     except ManagerUserPost.DoesNotExist:
@@ -349,7 +351,8 @@ def updateComment(request, commentId):
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
     if user.id != comment.user.id:
-        return JsonResponse(dict(message='USER_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
+        if user.is_superuser is False or user.is_staff is False:
+            return JsonResponse(dict(message='USER_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
     if 'content' in request.data.keys():
         comment.content = request.data['content']
     comment.save()
@@ -370,7 +373,8 @@ def deleteComment(request, commentId):
     token = request.headers['Authorization'].replace('Token ', '')
     user = Token.objects.get(key=token).user
     if user.id != comment.user.id:
-        return JsonResponse(dict(message='USER_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
+        if user.is_superuser is False or user.is_staff is False:
+            return JsonResponse(dict(message='USER_NOT_VALID'), status=status.HTTP_404_NOT_FOUND)
     try:
         post = Post.objects.get(id=comment.post.id, deleted_at=None)
     except Post.DoesNotExist:
