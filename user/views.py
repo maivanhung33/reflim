@@ -54,14 +54,16 @@ def getUserByToken(request):
         managerUserPost = ManagerUserPost.objects.get(user_id=user.id, deleted_at=None)
     except ManagerUserPost.DoesNotExist:
         return JsonResponse(dict(message='USER_NOT_FOUND'), status=status.HTTP_404_NOT_FOUND)
+    isAdmin = False
+    if user.is_superuser is True and user.is_staff is True:
+        isAdmin = True
     return JsonResponse(dict(id=user.id,
                              username=user.username,
                              first_name=user.first_name,
                              last_name=user.last_name,
                              email=user.email,
                              avatar=avatar,
-                             isSuperUser=user.is_superuser,
-                             isStaff=user.is_staff,
+                             isAdmin=isAdmin,
                              numberPost=managerUserPost.numberPost,
                              numberLike=managerUserPost.numberLike
                              ),
