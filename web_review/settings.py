@@ -35,7 +35,7 @@ SECRET_KEY = '8*vi%$9_vj29xcfd2j!agp!2zpso8ws-r(xkmgc^%%oaoud^4y'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [ '127.0.0.1', 'localhost', 'f7d6ad1593f0.ngrok.io']
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -75,7 +75,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True
-# CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_METHODS = [
     'DELETE',
